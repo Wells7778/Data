@@ -1,0 +1,7 @@
+elasticsearch/esdata/
+main/
+mongo/db/
+postgresql/
+redis/
+replica/
+data/
