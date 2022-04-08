@@ -1,7 +1,8 @@
-elasticsearch/esdata/
-main/
-mongo/db/
-postgresql/
-redis/
-replica/
-data/
+elasticsearch/*
+main/*
+mongo/db/*
+postgresql/*
+redis/*
+replica/*
+data/*
+mariadb/*

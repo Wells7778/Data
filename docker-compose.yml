@@ -10,6 +10,31 @@ services:
     ports:
       - 27017:27017
     restart: always
+  mariadb:
+    image: mariadb
+    platform: linux/amd64
+    container_name: mariadb
+    hostname: mariadb
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    ports:
+      - 3310:3306
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Taipei
+    env_file:
+      - ".env"
+    command: ["mysqld",
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci",
+      "--default-time-zone=+08:00"]
+    networks:
+      db_network:
+        ipv4_address: 172.24.0.20
+    healthcheck:
+      test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
+      interval: 2s
+      retries: 20
   main:
     image: mysql:5.6
     platform: linux/amd64
