@@ -1,25 +1,35 @@
-version: "3.5"
 services:
   mongo:
-    image: mongo:4.1
+    image: mongo
     container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: weiby
+      MONGO_INITDB_ROOT_PASSWORD: password
+    command: mongod --auth
     volumes:
-      - ./mongo/config/mongod.yml:/resource/mongod.yml
-      - ./mongo/db:/data/db
-    command: mongod --dbpath /data/db --port 27017 --config /resource/mongod.yml
+      - ./data/mongo/db:/data/db
     ports:
       - 27017:27017
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u weiby -p password --quiet | grep 1
+      interval: 10s
+      timeout: 10s
+      retries: 5
     restart: always
-  main:
-    image: mysql:5.6
+    networks:
+      - db_network
+  mysql:
+    image: mysql:8
     platform: linux/amd64
     container_name: main
     hostname: main
     volumes:
-      - ./data/main:/var/lib/mysql
+      - ./data/mysql/8:/var/lib/mysql
     ports:
       - 3306:3306
-    restart: unless-stopped
+    networks:
+      - db_network
+    restart: always
     environment:
       - TZ=Asia/Taipei
     env_file:
@@ -28,52 +38,56 @@ services:
       "--character-set-server=utf8mb4",
       "--collation-server=utf8mb4_unicode_ci",
       "--default-time-zone=+08:00",
-      "--server-id=1",
-      "--log-bin=/var/lib/mysql/mysql-bin.log",
-      "--log-slave-updates=0",
-      "--expire_logs_days=10",
-      "--max_binlog_size=100M",
-      "--innodb_flush_log_at_trx_commit=1",
-      "--sync_binlog=1",
-      "--read_only=0"]
-    networks:
-      db_network:
-        ipv4_address: 172.24.0.2
+      "--default-authentication-plugin=mysql_native_password"]
     healthcheck:
       test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
       interval: 2s
       retries: 20
-  replica:
-    image: mysql:5.6
+  mysql57:
+    image: mysql:5.7
     platform: linux/amd64
+    container_name: mysql57
+    hostname: mysql57
     volumes:
-      - ./data/replica:/var/lib/mysql
-    container_name: replica
-    hostname: replica
+      - ./data/mysql/5.7:/var/lib/mysql
     ports:
       - 3307:3306
-    restart: unless-stopped
+    networks:
+      - db_network
+    restart: always
     environment:
       - TZ=Asia/Taipei
     env_file:
-      - "./.env"
+      - ".env"
     command: ["mysqld",
       "--character-set-server=utf8mb4",
       "--collation-server=utf8mb4_unicode_ci",
       "--default-time-zone=+08:00",
-      "--server-id=2",
-      "--log-bin=/var/lib/mysql/mysql-bin.log",
-      "--log-slave-updates=0",
-      "--expire_logs_days=10",
-      "--max_binlog_size=100M",
-      "--innodb_flush_log_at_trx_commit=1",
-      "--sync_binlog=0",
-      "--read_only=1"]
+      "--default-authentication-plugin=mysql_native_password"]
+    healthcheck:
+      test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
+      interval: 2s
+      retries: 20
+  mariadb:
+    image: mariadb:10.11.7
+    platform: linux/amd64
+    container_name: mariadb
+    hostname: mariadb
+    volumes:
+      - ./data/mariadb:/var/lib/mysql
+    ports:
+      - 3308:3306
+    restart: always
+    environment:
+      - TZ=Asia/Taipei
+    env_file:
+      - ".env"
+    command: ["mysqld",
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci",
+      "--default-time-zone=+08:00"]
     networks:
-      db_network:
-        ipv4_address: 172.24.0.3
-    depends_on:
-      - main
+      - db_network
     healthcheck:
       test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
       interval: 2s
@@ -82,20 +96,19 @@ services:
     image: redis
     container_name: redis
     volumes:
-      - ./redis/data:/data
-      - ./redis/redis.conf:/etc/redis/redis.conf
-    entrypoint: ["redis-server", "/etc/redis/redis.conf"]
-    ports:
-      - 6360:6359
+      - ./data/redis/data:/data
+    networks:
+      - db_network
     restart: always
-    env_file:
-      - "./redis/.env"
-
   elasticsearch:
-    image: elasticsearch-smartcn
+    build:
+      context: .
+      dockerfile: Dockerfile.elasticsearch
     container_name: elasticsearch_smartcn
     volumes:
-      - ./elasticsearch/esdata:/usr/share/elasticsearch/data
+      - ./data/elasticsearch/esdata:/usr/share/elasticsearch/data
+    networks:
+      - db_network
     ports:
       - 9200:9200
       - 9300:9300
@@ -106,17 +119,22 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:7.14.1
     container_name: kibana
+    networks:
+      - db_network
     ports:
       - 5601:5601
   postgresql:
     image: postgres
     container_name: postgresql
+    networks:
+      - db_network
     ports:
       - 5432:5432
     volumes:
-      # - ./postgresql/initdb.d:/docker-entrypoint-initdb.d
-      - ./postgresql/data:/var/lib/postgresql/data
+      - ./data/postgresql/data:/var/lib/postgresql/data
     restart: always
+    environment:
+      - TZ=Asia/Taipei
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
       interval: 10s
@@ -126,7 +144,4 @@ services:
       - ".env"
 networks:
   db_network:
-    ipam:
-      config:
-      - subnet: 172.24.0.0/16
-        gateway: 172.24.0.1
+    name: db_network

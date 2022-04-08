@@ -1,7 +1,9 @@
-elasticsearch/esdata/
-main/
-mongo/db/
-postgresql/
-redis/
-replica/
-data/
+elasticsearch
+!elasticsearch/Dockerfile
+mysql
+mongo/db
+postgresql
+redis
+replica
+data
+mariadb
