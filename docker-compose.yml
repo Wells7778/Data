@@ -34,11 +34,7 @@ services:
       - TZ=Asia/Taipei
     env_file:
       - ".env"
-    command: ["mysqld",
-      "--character-set-server=utf8mb4",
-      "--collation-server=utf8mb4_unicode_ci",
-      "--default-time-zone=+08:00",
-      "--default-authentication-plugin=mysql_native_password"]
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+08:00 --default-authentication-plugin=mysql_native_password --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
     healthcheck:
       test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
       interval: 2s
