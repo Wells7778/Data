@@ -19,7 +19,7 @@ services:
     networks:
       - db_network
   mysql:
-    image: mysql:8
+    image: mysql:8.0.20
     platform: linux/amd64
     container_name: main
     hostname: main
