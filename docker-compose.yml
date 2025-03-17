@@ -95,6 +95,8 @@ services:
       - ./data/redis/data:/data
     networks:
       - db_network
+    ports:
+      - :6379
     restart: always
   elasticsearch:
     build:
